@@ -6,79 +6,78 @@
 <style>
   body {
     background: #111;
-    color: #bbb;
+    color: #ccc;
     font-family: Arial, sans-serif;
     font-size: 13px;
-    padding: 14px;
     margin: 0;
-    user-select: none;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
   }
 
+  /* Difficulty row */
+  .diff-row {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+  .diff-btn {
+    background: #222;
+    color: #aaa;
+    border: 1px solid #444;
+    padding: 3px 10px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .diff-btn:hover { background: #2a2a2a; }
+  .diff-btn.active { background: #333; color: #eee; border-color: #666; }
+
+  /* Header: mine counter | reset | timer */
   .header {
-    margin-bottom: 6px;
     display: flex;
     align-items: center;
-    gap: 10px;
-    background: #1e1e1e;
+    gap: 14px;
+    background: #1a1a1a;
     border: 1px solid #333;
-    padding: 5px 8px;
-    width: fit-content;
+    padding: 5px 10px;
+    margin-bottom: 6px;
   }
-
   .lcd {
+    font-family: monospace;
+    font-size: 18px;
     font-weight: bold;
-    font-size: 15px;
     color: #0f0;
     background: #000;
-    border: 1px inset #333;
-    padding: 2px 6px;
+    border: 1px solid #222;
+    padding: 2px 7px;
     min-width: 3ch;
     text-align: right;
   }
-
   .reset-btn {
     background: #2a2a2a;
     border: 2px outset #555;
-    padding: 2px 6px;
-    font-size: 16px;
+    padding: 2px 8px;
+    font-size: 18px;
     cursor: pointer;
-    line-height: 1;
+    line-height: 1.3;
   }
   .reset-btn:active { border-style: inset; }
 
-  .diff-row {
-    margin-bottom: 6px;
-    display: flex;
-    gap: 4px;
-  }
-
-  .diff-btn {
-    background: #222;
-    border: 1px outset #555;
-    color: #aaa;
-    font-size: 11px;
-    padding: 2px 8px;
-    cursor: pointer;
-  }
-  .diff-btn.active {
-    background: #333;
-    border-style: inset;
-    color: #eee;
-  }
-  .diff-btn:hover { background: #2a2a2a; }
-
+  /* Board */
   .board {
     display: inline-grid;
-    gap: 0;
-    border: 2px inset #444;
-    background: #333;
+    gap: 1px;
+    background: #1a1a1a;
+    border: 2px solid #333;
+    padding: 2px;
   }
-
   .cell {
     width: 24px;
     height: 24px;
-    background: #444;
-    border: 2px outset #666;
+    background: #3c3c3c;
+    border: 2px outset #5a5a5a;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -86,35 +85,37 @@
     font-weight: bold;
     cursor: pointer;
   }
-
-  .cell:hover { background: #4e4e4e; }
-
+  .cell:hover { background: #454545; }
   .cell.revealed {
-    background: #1c1c1c;
+    background: #1e1e1e;
     border: 1px solid #2a2a2a;
     cursor: default;
   }
+  .cell.revealed:hover { background: #1e1e1e; }
 
+  /* Number colors */
   .cell[data-n="1"] { color: #6af; }
-  .cell[data-n="2"] { color: #6d6; }
+  .cell[data-n="2"] { color: #6c6; }
   .cell[data-n="3"] { color: #f55; }
   .cell[data-n="4"] { color: #88f; }
-  .cell[data-n="5"] { color: #f94; }
-  .cell[data-n="6"] { color: #4dd; }
+  .cell[data-n="5"] { color: #f84; }
+  .cell[data-n="6"] { color: #4cc; }
   .cell[data-n="7"] { color: #ddd; }
-  .cell[data-n="8"] { color: #777; }
+  .cell[data-n="8"] { color: #666; }
 
-  .cell.mine-revealed { background: #1a0000; border-color: #400; }
+  .cell.mine-revealed { background: #200; border-color: #500; }
   .cell.mine-fatal    { background: #600; border-color: #900; }
-  .cell.wrong-flag    { background: #1a0000; color: #f44; border-color: #400; }
+  .cell.wrong-flag    { background: #200; color: #f44; border-color: #500; }
 
+  /* Status line */
   .status {
-    margin-top: 5px;
+    margin-top: 6px;
     font-size: 11px;
-    color: #555;
+    color: #444;
+    text-align: center;
   }
-  .status.win  { color: #5a5; }
-  .status.lose { color: #a44; }
+  .status.win  { color: #585; }
+  .status.lose { color: #844; }
 </style>
 </head>
 <body>
@@ -133,7 +134,7 @@
 
 <div class="board" id="board"></div>
 
-<div class="status" id="status">left-click = reveal &nbsp;|&nbsp; right-click = flag / mark</div>
+<div class="status" id="status">left-click reveal &nbsp;·&nbsp; right-click flag/mark</div>
 
 <script>
 const DIFFICULTIES = {
@@ -144,11 +145,11 @@ const DIFFICULTIES = {
 
 let state = {};
 
-function initGame(difficulty) {
-  const cfg = DIFFICULTIES[difficulty];
+function initGame(d) {
+  const cfg = DIFFICULTIES[d];
   clearInterval(state.timerInterval);
   state = {
-    difficulty, rows: cfg.rows, cols: cfg.cols, totalMines: cfg.mines,
+    difficulty: d, rows: cfg.rows, cols: cfg.cols, totalMines: cfg.mines,
     cells: [], gameStatus: 'idle', firstClick: true,
     flagCount: 0, timerValue: 0, timerInterval: null,
   };
@@ -160,15 +161,15 @@ function initGame(difficulty) {
   renderBoard();
   document.getElementById('resetBtn').textContent = '🙂';
   document.getElementById('timer').textContent = '000';
-  setStatus('', 'left-click = reveal  |  right-click = flag / mark');
+  setStatus('', 'left-click reveal · right-click flag/mark');
   updateCounter();
 }
 
-function placeMines(excludeR, excludeC) {
+function placeMines(er, ec) {
   const forbidden = new Set();
   for (let dr = -1; dr <= 1; dr++)
     for (let dc = -1; dc <= 1; dc++) {
-      const nr = excludeR + dr, nc = excludeC + dc;
+      const nr = er + dr, nc = ec + dc;
       if (nr >= 0 && nr < state.rows && nc >= 0 && nc < state.cols)
         forbidden.add(nr * state.cols + nc);
     }
@@ -214,7 +215,10 @@ function renderBoard() {
       el.dataset.r = r; el.dataset.c = c;
       el.addEventListener('click', onLeft);
       el.addEventListener('contextmenu', onRight);
-      el.addEventListener('mousedown', e => { if (e.button === 0 && state.gameStatus !== 'won' && state.gameStatus !== 'lost') document.getElementById('resetBtn').textContent = '😮'; });
+      el.addEventListener('mousedown', e => {
+        if (e.button === 0 && state.gameStatus !== 'won' && state.gameStatus !== 'lost')
+          document.getElementById('resetBtn').textContent = '😮';
+      });
       board.appendChild(el);
     }
 }
@@ -231,8 +235,8 @@ function refreshCell(r, c) {
   if (!el) return;
   el.removeAttribute('data-n'); el.className = 'cell'; el.textContent = '';
   if (!cell.isRevealed) {
-    if (cell.cellState === 'flagged')  { el.textContent = '🚩'; }
-    if (cell.cellState === 'question') { el.textContent = '❓'; }
+    if (cell.cellState === 'flagged')  el.textContent = '🚩';
+    if (cell.cellState === 'question') el.textContent = '❓';
     return;
   }
   if (cell.isMine) { el.classList.add('mine-revealed'); el.textContent = '💣'; }
@@ -296,15 +300,16 @@ function checkWin() {
   endGame(true, -1, -1);
 }
 
-function endGame(won, fatalR, fatalC) {
+function endGame(won, fr, fc) {
   stopTimer(); state.gameStatus = won ? 'won' : 'lost';
   if (won) {
     document.getElementById('resetBtn').textContent = '😎';
     setStatus('win', 'you win!');
     for (let r = 0; r < state.rows; r++)
       for (let c = 0; c < state.cols; c++)
-        if (state.cells[r][c].isMine && state.cells[r][c].cellState !== 'flagged')
-          { state.cells[r][c].cellState = 'flagged'; refreshCell(r, c); }
+        if (state.cells[r][c].isMine && state.cells[r][c].cellState !== 'flagged') {
+          state.cells[r][c].cellState = 'flagged'; refreshCell(r, c);
+        }
     state.flagCount = state.totalMines; updateCounter();
   } else {
     document.getElementById('resetBtn').textContent = '😵';
@@ -312,7 +317,7 @@ function endGame(won, fatalR, fatalC) {
     for (let r = 0; r < state.rows; r++)
       for (let c = 0; c < state.cols; c++) {
         const cell = state.cells[r][c];
-        if (r === fatalR && c === fatalC) {
+        if (r === fr && c === fc) {
           cell.isRevealed = true;
           const el = cellEl(r, c); el.className = 'cell mine-fatal'; el.textContent = '💣';
         } else if (cell.isMine && !cell.isRevealed && cell.cellState !== 'flagged') {
